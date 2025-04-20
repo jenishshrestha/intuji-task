@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { SiteHeader } from "@/components/dashboard/site-header";
 
 import "./theme.css";
-import ReduxProvider from "../store/ReduxProvider";
+import ReduxProvider from "../../store/ReduxProvider";
 
 export default async function DashboardLayout({
   children,

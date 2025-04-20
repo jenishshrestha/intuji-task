@@ -1,6 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import pmReducer from "./player-management/pmSlice";
+import tmReducer from "./team-management/tmSlice";
+import generatedTeamsSlice from "./team-generation/generatedTeamsSlice";
 
 /**
  * =================================================
@@ -10,7 +12,9 @@ import pmReducer from "./player-management/pmSlice";
 
 const store = configureStore({
   reducer: {
-    playerData: pmReducer,
+    playerDatas: pmReducer,
+    teamDatas: tmReducer,
+    generatedTeams: generatedTeamsSlice,
   },
 });
 

@@ -9,7 +9,18 @@ export interface DataTypes {
 
 // Initial state
 const initialState = {
-  data: [{ id: 1, name: "Player 1", skill: 0 }] as DataTypes[],
+  data: [
+    { id: 1, name: "Player 1", skill: 3 },
+    { id: 2, name: "Player 2", skill: 5 },
+    { id: 3, name: "Player 3", skill: 4 },
+    { id: 4, name: "Player 4", skill: 5 },
+    { id: 5, name: "Player 5", skill: 3 },
+    { id: 6, name: "Player 6", skill: 5 },
+    { id: 7, name: "Player 7", skill: 3 },
+    { id: 8, name: "Player 8", skill: 5 },
+    { id: 9, name: "Player 9", skill: 5 },
+    { id: 10, name: "Player 10", skill: 4 },
+  ] as DataTypes[],
 };
 
 /**
