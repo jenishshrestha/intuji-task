@@ -14,6 +14,12 @@ A modern web application built with **Next.js**, **TypeScript**, and a fully cus
 - 🖍️ Sass – CSS with superpowers
 - 🧠 Lucide React – Icon library
 
+## 🏗️ Backend Tech Stack
+
+- 🔥 Supabase – Firebase alternative with Postgres
+- 🐘 PostgreSQL – Relational database
+- 🌩️ Vercel Deployment
+
 ## 🧪 Tooling & DX
 
 - 🛠️ ESLint – Linting
