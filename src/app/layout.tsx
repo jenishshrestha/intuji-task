@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Nunito, PT_Serif, PT_Sans } from "next/font/google";
 import "./globals.css";
+import ReduxProvider from "@/store/ReduxProvider";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -35,7 +36,7 @@ export default function RootLayout({
         className={`${nunito.variable} ${ptSans.variable} ${ptSerif.variable} relative antialiased`}
       >
         <div className="texture" />
-        {children}
+        <ReduxProvider>{children}</ReduxProvider>
       </body>
     </html>
   );

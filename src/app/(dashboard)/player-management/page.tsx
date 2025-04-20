@@ -1,5 +1,5 @@
 "use client";
-import { usePlayerData } from "@/app/store/hooks";
+import { usePlayerData } from "@/store/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDebounce from "@/hooks/useDebounceFunction";
@@ -62,7 +62,7 @@ export default function Page() {
         <div className="px-4 lg:px-6">
           <h2 className="mb-3">Players</h2>
           <div className="flex flex-col items-start gap-4">
-            <div className="flex w-full flex-col gap-3">
+            <div className="flex flex-col gap-3">
               {playersData.map((player) => (
                 <div key={player.id} className="flex items-center gap-2">
                   {/* Remove Button */}
@@ -105,10 +105,11 @@ export default function Page() {
               ))}
             </div>
             <div className="flex gap-2">
-              <Button type="submit" onClick={addNewPlayer} variant="outline">
+              <Button type="button" onClick={addNewPlayer} variant="outline">
                 <Badge>{playersData.length}</Badge>
                 Add Participant
               </Button>
+              <Button type="submit">Save</Button>
             </div>
           </div>
         </div>
