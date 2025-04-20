@@ -1,64 +1,99 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
-import { useGeneratedTeams, usePlayerData, useTeamData } from "@/store/hooks";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+
+import { useAddGTMutation } from "@/services/generateTeamApi";
+import { useFetchAllPlayersQuery } from "@/services/playersApi";
+import { useFetchAllTeamsQuery } from "@/services/teamApi";
 
 export default function TeamGenerationPage() {
   const router = useRouter();
 
-  /**
-   * get global states
-   */
-  const { generateTeam } = useGeneratedTeams();
-
-  const { teamsDatas } = useTeamData();
-
-  const { playersData } = usePlayerData();
-
+  // local states
   const [title, setTitle] = useState("");
-  const [error, setError] = useState("");
+  const [titleError, setTitleError] = useState("");
+
+  /**
+   * Api service
+   */
+  // fetch players
+  const {
+    data: allPlayers,
+    error: playersError,
+    isLoading: isFetchingPlayers,
+    isError: isPlayersError,
+  } = useFetchAllPlayersQuery();
+
+  // fetch teams
+  const {
+    data: allTeams,
+    error: teamsError,
+    isLoading: isFetchingTeams,
+    isError: isTeamsError,
+  } = useFetchAllTeamsQuery();
+
+  // add generated team distribution
+  const [addGT, { isLoading: isAdding }] = useAddGTMutation();
 
   /**
    * Generate Teams divided equally based on skills
-   * @returns
+   * Greedy Team Assignment Algorithm
+   * - Sort players descending by skill
+   * - Initialize empty teams
+   * - Assign each player to the team with the current lowest total skill
+   * - O(n log n)
    */
-  const generateBalancedTeams = () => {
+
+  const generateBalancedTeams = async () => {
+    setTitleError("");
     if (!title.trim()) {
-      setError("Please enter a title");
+      setTitleError("Please enter a title");
       return;
     }
 
-    if (playersData.length === 0 || teamsDatas.length === 0) {
-      setError("You need players and teams to generate.");
+    if (!allPlayers?.length || !allTeams?.length) {
+      setTitleError("You need players and teams to generate.");
       return;
     }
 
-    const sortedPlayers = [...playersData].sort((a, b) => b.skill - a.skill);
-    const teamCount = teamsDatas.length;
+    // step 1 - Sort players from highest skill to lowest
+    const sortedPlayers = [...allPlayers].sort((a, b) => b.skill - a.skill);
 
-    const teamMap: Record<string, typeof playersData> = {};
-    teamsDatas.forEach((team) => {
+    // Step 2 - Initialize empty teams
+    const teamMap: Record<string, typeof allPlayers> = {};
+    const teamSkillTotals: Record<string, number> = {};
+
+    allTeams.forEach((team) => {
       teamMap[team.name] = [];
+      teamSkillTotals[team.name] = 0;
     });
 
-    sortedPlayers.forEach((player, index) => {
-      const teamIndex = index % teamCount;
-      const teamName = teamsDatas[teamIndex].name;
-      teamMap[teamName].push(player);
-    });
+    // Step 3 - Assign players to the team with the lowest current total skill
+    for (const player of sortedPlayers) {
+      const targetTeam = Object.entries(teamSkillTotals).sort(
+        (a, b) => a[1] - b[1],
+      )[0][0];
+      teamMap[targetTeam].push(player);
+      teamSkillTotals[targetTeam] += player.skill;
+    }
 
-    const teamId = nanoid(12);
+    // update database
+    const teamSlug = nanoid(12);
 
-    generateTeam({
-      id: teamId,
-      title,
-      teams: teamMap,
-    });
+    try {
+      await addGT({
+        title: title,
+        slug: teamSlug,
+        teams: teamMap,
+      }).unwrap();
 
-    router.push(`/team-${teamId}`);
+      router.push(`/team-${teamSlug}`);
+    } catch (error) {
+      console.error("Failed to add player:", error);
+    }
   };
 
   return (
@@ -77,9 +112,29 @@ export default function TeamGenerationPage() {
                 className="w-full rounded border px-3 py-2"
               />
 
-              {error && <p className="text-red-500">{error}</p>}
+              {/* Error handling */}
+              {isPlayersError && (
+                <p className="text-red-500">
+                  Failed to load players:{" "}
+                  {(playersError as RTKQueryError)?.message}
+                </p>
+              )}
+              {isTeamsError && (
+                <p className="text-red-500">
+                  Failed to load teams: {(teamsError as RTKQueryError)?.message}
+                </p>
+              )}
 
-              <Button onClick={generateBalancedTeams}>Generate Teams</Button>
+              {titleError && <p className="text-red-500">{titleError}</p>}
+
+              {/* Loading state */}
+              {isFetchingPlayers || isFetchingTeams ? (
+                <p className="text-gray-500">Retrieving players and teams...</p>
+              ) : (
+                <Button onClick={generateBalancedTeams} disabled={isAdding}>
+                  {isAdding ? "Generating..." : "Generate Teams"}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -87,3 +142,11 @@ export default function TeamGenerationPage() {
     </>
   );
 }
+
+type RTKQueryError = {
+  status?: number | string;
+  data?: {
+    message?: string;
+  };
+  message?: string;
+};

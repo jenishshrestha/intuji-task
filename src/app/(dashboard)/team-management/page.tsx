@@ -4,10 +4,15 @@ import { useTeamData } from "@/store/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDebounce from "@/hooks/useDebounceFunction";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  useAddTeamDbMutation,
+  useRemoveTeamDbMutation,
+  useFetchAllTeamsQuery,
+  useUpsertTeamsMutation,
+} from "@/services/teamApi";
 
-// Lazy load the component
-const LazyConfirmDelete = lazy(() => import("../components/confirm-delete"));
+import ConfirmDelete from "../components/confirm-delete";
 
 /**
  * =================================================
@@ -19,7 +24,7 @@ export default function Page() {
   /**
    * Hook to access store
    */
-  const { teamsDatas, updateTeam } = useTeamData();
+  const { teamsDatas, updateTeam, removeTeam } = useTeamData();
 
   /**
    * Handle input field value
@@ -54,14 +59,72 @@ export default function Page() {
   };
 
   /**
-   * Add new team
+   * api service for team
    */
-  const addNewTeam = () => {
-    const newId = teamsDatas.length
-      ? teamsDatas[teamsDatas.length - 1].id + 1
-      : 1;
-    updateTeam([...teamsDatas, { id: newId, name: `Team ${newId}` }]);
+  const [removeTeamDb, { isLoading: isRemoving }] = useRemoveTeamDbMutation();
+
+  const [addTeamDb, { isLoading: isAdding }] = useAddTeamDbMutation();
+
+  const [upsertTeams, { isLoading: isUpserting }] = useUpsertTeamsMutation();
+
+  const {
+    data: allTeams,
+    error,
+    isLoading: isFetching,
+    isError,
+  } = useFetchAllTeamsQuery();
+
+  // update global state after fetching
+  useEffect(() => {
+    if (allTeams) {
+      updateTeam(allTeams);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allTeams]);
+
+  // remove team
+  const removeTeamFromDB = async (id: number) => {
+    try {
+      const removedId = await removeTeamDb(id).unwrap();
+
+      // change local state
+      removeTeam(removedId.id);
+    } catch (error) {
+      console.error("Failed to add player:", error);
+    }
   };
+
+  // add team
+  const addNewTeamToDB = async () => {
+    try {
+      const addedNewTeam = await addTeamDb({
+        name: `New Team`,
+      }).unwrap();
+
+      // change local state
+      updateTeam([...teamsDatas, addedNewTeam]);
+    } catch (error) {
+      console.error("Failed to add player:", error);
+    }
+  };
+
+  // bulk update
+  const submitTeams = async () => {
+    try {
+      // Filter out invalid/empty players if needed
+      const validPlayers = teamsDatas.filter((p) => p.name.trim());
+      console.log("valid:", validPlayers);
+
+      const updatedPlayers = await upsertTeams(validPlayers).unwrap();
+      updateTeam(updatedPlayers);
+    } catch (error) {
+      console.error("Save failed:", error);
+    }
+  };
+
+  if (isFetching) return <p>Loading...</p>;
+
+  if (isError) return <p>Error: {String(error)}</p>;
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
@@ -74,9 +137,11 @@ export default function Page() {
                 return (
                   <div key={team.id} className="flex items-center gap-2">
                     {/* Remove Button */}
-                    <Suspense fallback={null}>
-                      <LazyConfirmDelete id={team.id} deleteType="team" />
-                    </Suspense>
+                    <ConfirmDelete
+                      id={team.id}
+                      deleteFn={removeTeamFromDB}
+                      loading={isRemoving}
+                    />
 
                     {/* Name of the players */}
                     <input
@@ -95,11 +160,22 @@ export default function Page() {
 
             {/* button to add teams */}
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={addNewTeam}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addNewTeamToDB}
+                disabled={isAdding || isUpserting}
+              >
                 <Badge>{teamsDatas.length}</Badge>
-                Add Team
+                {isAdding ? "Adding..." : "Add Team"}
               </Button>
-              <Button type="submit">Save</Button>
+              <Button
+                type="submit"
+                onClick={submitTeams}
+                disabled={isAdding || isUpserting}
+              >
+                {isUpserting ? "Updating..." : "Update All"}
+              </Button>
             </div>
           </div>
         </div>

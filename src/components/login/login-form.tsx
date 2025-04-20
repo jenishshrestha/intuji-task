@@ -4,6 +4,14 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { redirect } from "next/navigation";
+
+// Server action
+async function loginAction() {
+  "use server";
+  // For now, just redirect
+  redirect("/dashboard");
+}
 
 export function LoginForm({
   className,
@@ -14,7 +22,7 @@ export function LoginForm({
 }) {
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form className="flex flex-col gap-6">
+      <form className="flex flex-col gap-6" action={loginAction}>
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex flex-col items-center text-center">
             <h1 className="font-serif text-2xl font-bold">
@@ -33,6 +41,7 @@ export function LoginForm({
               id="email"
               type="email"
               placeholder="m@example.com"
+              defaultValue="m@example.com"
               required
             />
           </div>
@@ -49,6 +58,7 @@ export function LoginForm({
             <Input
               id="password"
               type="password"
+              defaultValue="m@example.com"
               required
               placeholder="**********"
             />
@@ -58,7 +68,7 @@ export function LoginForm({
             className="border-primary-border shadow-primary w-full border"
             size="lg"
           >
-            Login
+            Redirect To Dashboard
           </Button>
           <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
             <span className="bg-background text-muted-foreground relative z-10 px-2">

@@ -1,14 +1,25 @@
 "use client";
+
 import { usePlayerData } from "@/store/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDebounce from "@/hooks/useDebounceFunction";
 import { useEffect, useState } from "react";
+import ConfirmDelete from "../components/confirm-delete";
+
+import {
+  useAddPlayerMutation,
+  useUpsertPlayersMutation,
+  useFetchAllPlayersQuery,
+  useRemovePlayerDbMutation,
+} from "@/services/playersApi";
 
 export default function Page() {
   const { playersData, removePlayer, updatePlayer } = usePlayerData();
 
-  // Local state for name inputs
+  /**
+   * Handling input field for name
+   */
   const [localNames, setLocalNames] = useState<Record<number, string>>({});
 
   // Keep local names in sync with playersData
@@ -18,6 +29,8 @@ export default function Page() {
       names[player.id] = player.name;
     });
     setLocalNames(names);
+
+    console.log("playersData", playersData);
   }, [playersData]);
 
   // Debounced version of the update function
@@ -29,7 +42,7 @@ export default function Page() {
       updatePlayer(newPlayerDatas);
     }) as (...args: unknown[]) => void,
     500,
-  ); // adjust delay as needed
+  );
 
   // Handler for name input change
   const handleNameChange = (id: number, value: string) => {
@@ -37,7 +50,11 @@ export default function Page() {
     debouncedUpdate(id, value);
   };
 
-  // update skill
+  /**
+   * update skill of player in playersData state
+   * @param id
+   * @param skill
+   */
   const updateSkill = (id: number, skill: number) => {
     const newPlayerDatas = playersData.map((p) =>
       p.id === id ? { ...p, skill } : p,
@@ -45,16 +62,80 @@ export default function Page() {
     updatePlayer(newPlayerDatas);
   };
 
-  // add new player
-  const addNewPlayer = () => {
-    const newId = playersData.length
-      ? playersData[playersData.length - 1].id + 1
-      : 1;
-    updatePlayer([
-      ...playersData,
-      { id: newId, name: `Player ${newId}`, skill: 0 },
-    ]);
+  /**
+   * api service for player
+   */
+  const [upsertPlayers, { isLoading: isUpserting }] =
+    useUpsertPlayersMutation();
+
+  // add player
+  const [addPlayer, { isLoading: isAdding }] = useAddPlayerMutation();
+
+  // remove player
+  const [removePlayerDb, { isLoading: isRemoving }] =
+    useRemovePlayerDbMutation();
+
+  const {
+    data: allPlayers,
+    error,
+    isLoading: isFetching,
+    isError,
+  } = useFetchAllPlayersQuery();
+
+  // update state
+  useEffect(() => {
+    if (allPlayers) {
+      updatePlayer(allPlayers);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPlayers]);
+
+  // submit players to supabase
+  const submitPlayers = async () => {
+    try {
+      // Filter out invalid/empty players if needed
+      const validPlayers = playersData.filter(
+        (p) => p.name.trim() && p.skill > 0,
+      );
+      console.log("valid:", validPlayers);
+
+      const updatedPlayers = await upsertPlayers(validPlayers).unwrap();
+      updatePlayer(updatedPlayers);
+    } catch (error) {
+      console.error("Save failed:", error);
+    }
   };
+
+  // add new player
+  const addNewPlayerToDB = async () => {
+    try {
+      const addedNewPlayer = await addPlayer({
+        name: `New Player Name`,
+        skill: 1,
+      }).unwrap();
+
+      // change local state
+      updatePlayer([...playersData, addedNewPlayer]);
+    } catch (error) {
+      console.error("Failed to add player:", error);
+    }
+  };
+
+  // remove player
+  const removePlayerFromDB = async (id: number) => {
+    try {
+      const removedId = await removePlayerDb(id).unwrap();
+
+      // change local state
+      removePlayer(removedId.id);
+    } catch (error) {
+      console.error("Failed to add player:", error);
+    }
+  };
+
+  if (isFetching) return <p>Loading...</p>;
+
+  if (isError) return <p>Error: {String(error)}</p>;
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
@@ -66,13 +147,11 @@ export default function Page() {
               {playersData.map((player) => (
                 <div key={player.id} className="flex items-center gap-2">
                   {/* Remove Button */}
-                  <Button
-                    variant="outline"
-                    onClick={() => removePlayer(player.id)}
-                    className=""
-                  >
-                    ×
-                  </Button>
+                  <ConfirmDelete
+                    id={player.id}
+                    deleteFn={removePlayerFromDB}
+                    loading={isRemoving}
+                  />
 
                   {/* Name of the players */}
                   <input
@@ -105,11 +184,22 @@ export default function Page() {
               ))}
             </div>
             <div className="flex gap-2">
-              <Button type="button" onClick={addNewPlayer} variant="outline">
+              <Button
+                type="button"
+                onClick={addNewPlayerToDB}
+                variant="outline"
+                disabled={isAdding || isUpserting}
+              >
                 <Badge>{playersData.length}</Badge>
-                Add Participant
+                {isAdding ? "Adding..." : "Add Participant"}
               </Button>
-              <Button type="submit">Save</Button>
+              <Button
+                type="button"
+                onClick={submitPlayers}
+                disabled={isAdding || isUpserting}
+              >
+                {isUpserting ? "Updating..." : "Update All"}
+              </Button>
             </div>
           </div>
         </div>

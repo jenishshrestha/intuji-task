@@ -11,18 +11,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
-import { usePlayerData, useTeamData } from "@/store/hooks";
-
-const ConfirmDelete: React.FC<{ id: number; deleteType: string }> = (props) => {
-  const { id, deleteType } = props;
-
-  const { removePlayer } = usePlayerData();
-  const { removeTeam } = useTeamData();
+const ConfirmDelete: React.FC<{
+  id: number;
+  deleteFn: (id: number) => void;
+  loading: boolean;
+}> = (props) => {
+  const { id, deleteFn, loading } = props;
 
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline">x</Button>
+        <Button variant="outline" disabled={loading}>
+          x
+        </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -31,11 +32,7 @@ const ConfirmDelete: React.FC<{ id: number; deleteType: string }> = (props) => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() =>
-              deleteType === "team" ? removeTeam(id) : removePlayer(id)
-            }
-          >
+          <AlertDialogAction onClick={() => deleteFn(id)}>
             Delete
           </AlertDialogAction>
         </AlertDialogFooter>
