@@ -7,9 +7,9 @@ interface Player {
 }
 
 export interface GeneratedTeamSet {
-  id: string;
   title: string;
   teams: Record<string, Player[]>;
+  slug: string;
 }
 
 interface State {
@@ -26,7 +26,7 @@ const generatedTeamsSlice = createSlice({
   reducers: {
     setGeneratedTeam: (state, action: PayloadAction<GeneratedTeamSet>) => {
       const teamSet = action.payload;
-      state.data[teamSet.id] = teamSet;
+      state.data[teamSet.slug] = teamSet;
     },
   },
 });
